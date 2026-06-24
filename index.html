@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<!-- 白小白・你的貼文小助手 | 好厝安居 出品
+     版本 v0.3.0 (2026-06-24) | 升級紀錄見 CHANGELOG.md
+     v0.3.0 帳號連結模組＋輸入想法生文＋平台分享
+     v0.2.0 小白白貓形象  /  v0.1.0 MVP 首版 -->
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>白小白・你的貼文小助手</title>
+<style>
+  :root{
+    --walnut:#3D2B1F; --wood:#6B4C3B; --gold:#C4A882; --cream:#F5EFE6;
+    --char:#2C2C2A; --line:#E8E0D4; --green:#2E5040;
+    --nail:#C77B92; --rent:#2E5040; --realtor:#2E4F6A;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;
+    background:var(--cream);color:var(--char);line-height:1.7;
+    max-width:480px;margin:0 auto;min-height:100vh;position:relative;overflow-x:hidden}
+  .song{font-family:"Songti TC","PMingLiU","Noto Serif TC",serif}
+  /* top bar */
+  header{position:sticky;top:0;z-index:30;background:rgba(245,239,230,.92);
+    backdrop-filter:blur(8px);border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:10px;padding:12px 16px}
+  .mascot{width:44px;height:44px;border-radius:50%;flex:none;
+    background:var(--cream) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 44'%3E%3Cpath d='M10 14 L12 4 L20 11 Z' fill='%23fff' stroke='%23C4A882' stroke-width='1.5' stroke-linejoin='round'/%3E%3Cpath d='M34 14 L32 4 L24 11 Z' fill='%23fff' stroke='%23C4A882' stroke-width='1.5' stroke-linejoin='round'/%3E%3Cpath d='M12.6 11 L13.6 6 L17 10 Z' fill='%23E6B7C4'/%3E%3Cpath d='M31.4 11 L30.4 6 L27 10 Z' fill='%23E6B7C4'/%3E%3Cellipse cx='22' cy='25' rx='14' ry='12.5' fill='%23fff' stroke='%23C4A882' stroke-width='1.5'/%3E%3Ccircle cx='17' cy='24' r='1.9' fill='%233D2B1F'/%3E%3Ccircle cx='27' cy='24' r='1.9' fill='%233D2B1F'/%3E%3Cpath d='M20.5 28 L23.5 28 L22 30 Z' fill='%23E08DA0'/%3E%3Cpath d='M22 30 Q20 32 18.5 30.3' fill='none' stroke='%23C4A882' stroke-width='1' stroke-linecap='round'/%3E%3Cpath d='M22 30 Q24 32 25.5 30.3' fill='none' stroke='%23C4A882' stroke-width='1' stroke-linecap='round'/%3E%3Cline x1='8' y1='24.5' x2='13.5' y2='25' stroke='%23C4A882' stroke-width='1' stroke-linecap='round'/%3E%3Cline x1='8' y1='27.5' x2='13.5' y2='27' stroke='%23C4A882' stroke-width='1' stroke-linecap='round'/%3E%3Cline x1='36' y1='24.5' x2='30.5' y2='25' stroke='%23C4A882' stroke-width='1' stroke-linecap='round'/%3E%3Cline x1='36' y1='27.5' x2='30.5' y2='27' stroke='%23C4A882' stroke-width='1' stroke-linecap='round'/%3E%3C/svg%3E") center/96% no-repeat;
+    box-shadow:0 2px 6px rgba(61,43,31,.12)}
+  header .t{font-weight:800;font-size:17px;color:var(--walnut)}
+  header .s{font-size:11px;color:var(--wood)}
+  /* views */
+  .view{padding:18px 16px 90px;display:none;animation:fade .35s}
+  .view.on{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  /* chat bubble */
+  .bubble{display:flex;gap:10px;margin:14px 0;align-items:flex-start}
+  .bubble .mascot{width:34px;height:34px}
+  .bubble .say{background:#fff;border:1px solid var(--line);border-radius:4px 16px 16px 16px;
+    padding:11px 14px;font-size:14.5px;box-shadow:0 1px 4px rgba(61,43,31,.06);max-width:84%}
+  /* hero */
+  h1.hero{font-size:25px;color:var(--walnut);line-height:1.4;margin:6px 0 4px}
+  .sub{color:var(--wood);font-size:14px;margin-bottom:20px}
+  /* industry cards */
+  .pick{display:grid;gap:13px}
+  .indus{border:1.5px solid var(--line);border-radius:16px;padding:16px;background:#fff;
+    cursor:pointer;display:flex;align-items:center;gap:14px;transition:.2s;position:relative;overflow:hidden}
+  .indus:active{transform:scale(.98)}
+  .indus .ico{width:48px;height:48px;border-radius:13px;flex:none;display:grid;place-items:center;
+    font-size:24px;color:#fff}
+  .indus .nm{font-weight:800;font-size:16px;color:var(--walnut)}
+  .indus .ds{font-size:12.5px;color:var(--wood);margin-top:2px}
+  .indus .go{margin-left:auto;color:var(--gold);font-size:20px;font-weight:700}
+  /* badges */
+  .badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;color:#fff}
+  .b-plat{background:var(--wood)}
+  .pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;
+    border:1px solid var(--gold);color:var(--walnut);background:#fff;margin:0 4px 4px 0}
+  /* section */
+  .sec-t{font-weight:800;color:var(--walnut);font-size:16px;margin:22px 0 10px;display:flex;align-items:center;gap:7px}
+  .sec-t::before{content:"";width:4px;height:16px;background:var(--gold);border-radius:2px}
+  /* day list */
+  .day{background:#fff;border:1px solid var(--line);border-radius:13px;padding:13px 14px;margin-bottom:10px;
+    cursor:pointer;transition:.15s}
+  .day:active{background:#fbf7f0}
+  .day .top{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+  .day .dn{font-weight:800;color:var(--gold);font-size:13px;min-width:34px}
+  .day .ti{font-size:14px;color:var(--char);font-weight:600}
+  .day .meta{font-size:11.5px;color:var(--wood);margin-left:42px}
+  /* post detail / generated */
+  .post{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;margin-top:6px;
+    box-shadow:0 2px 10px rgba(61,43,31,.06)}
+  .post .head{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+  .post .body{white-space:pre-wrap;font-size:15px;line-height:1.85;color:#241c16}
+  .tags{margin-top:12px;font-size:12.5px;color:var(--green);font-weight:600;line-height:1.9}
+  .btn{display:block;width:100%;text-align:center;padding:14px;border-radius:13px;border:none;
+    font-size:15px;font-weight:800;cursor:pointer;margin-top:13px;font-family:inherit}
+  .btn-main{background:var(--walnut);color:var(--cream)}
+  .btn-main:active{background:#2b1d14}
+  .btn-ghost{background:#fff;border:1.5px solid var(--gold);color:var(--walnut)}
+  .row2{display:flex;gap:10px}
+  .row2 .btn{margin-top:13px}
+  .note{font-size:11.5px;color:var(--wood);text-align:center;margin-top:8px}
+  /* upload demo */
+  .drop{border:2px dashed var(--gold);border-radius:16px;padding:26px 16px;text-align:center;
+    background:#fffdf9;cursor:pointer;margin-top:6px}
+  .drop .ic{font-size:34px}
+  .drop .tx{font-size:13.5px;color:var(--wood);margin-top:6px}
+  .thumb{width:100%;border-radius:12px;margin-top:12px;display:none}
+  .typing{font-size:13px;color:var(--wood);font-style:normal}
+  /* bottom nav */
+  nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;
+    background:#fff;border-top:1px solid var(--line);display:flex;z-index:40}
+  nav button{flex:1;background:none;border:none;padding:9px 0 11px;font-family:inherit;
+    color:var(--wood);font-size:11px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
+  nav button .ni{font-size:19px}
+  nav button.on{color:var(--walnut);font-weight:800}
+  .back{font-size:13px;color:var(--wood);background:none;border:none;cursor:pointer;
+    padding:4px 0;margin-bottom:6px;font-family:inherit}
+  .hide{display:none}
+  .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--walnut);
+    color:#fff;padding:10px 18px;border-radius:30px;font-size:13px;z-index:60;opacity:0;transition:.3s;pointer-events:none}
+  .toast.show{opacity:1}
+  .free{background:var(--green);color:#fff;font-size:10.5px;padding:2px 8px;border-radius:20px;font-weight:700}
+</style>
+</head>
+<body>
+<header>
+  <div class="mascot"></div>
+  <div>
+    <div class="t">白小白</div>
+    <div class="s">你的貼文小助手 ・ 好厝安居 出品</div>
+  </div>
+  <div style="margin-left:auto"><span class="free">免費版</span></div>
+</header>
+
+<!-- VIEW: 選產業 -->
+<section class="view on" id="v-home">
+  <div class="bubble">
+    <div class="mascot"></div>
+    <div class="say">嗨～我是<b>白小白</b> 🤍<br>每天幫你想好一篇貼文、用你的口氣寫，你點一下就發。<br>先告訴我，你是做哪一行的？</div>
+  </div>
+  <div class="pick" id="industryPick"></div>
+  <p class="note">免費版：每天自動幫你準備 1 篇。升級可解鎖多篇＋自動發文。</p>
+</section>
+
+<!-- VIEW: 主控台 -->
+<section class="view" id="v-dash">
+  <button class="back" onclick="go('home')">‹ 換一個產業</button>
+  <div class="bubble">
+    <div class="mascot"></div>
+    <div class="say" id="dashHi"></div>
+  </div>
+  <div class="row2">
+    <button class="btn btn-main" style="margin-top:4px" onclick="go('today')">📝 今天這篇</button>
+    <button class="btn btn-ghost" style="margin-top:4px" onclick="go('photo')">📸 拍照生文</button>
+  </div>
+
+  <div class="sec-t">自己有想法？打給我，我幫你寫</div>
+  <textarea id="ideaIn" placeholder="例如：今天想推母親節優惠、或想分享一個客人的故事…"
+    style="width:100%;border:1.5px solid var(--line);border-radius:13px;padding:12px;font-family:inherit;
+    font-size:14px;min-height:74px;resize:none;background:#fff"></textarea>
+  <div id="ideaPurpose" style="margin:8px 0"></div>
+  <button class="btn btn-main" onclick="genFromIdea()">✍️ 幫我寫成貼文</button>
+
+  <div class="sec-t">這 14 天，我都幫你排好了</div>
+  <div id="calendar"></div>
+</section>
+
+<!-- VIEW: 帳號連結 -->
+<section class="view" id="v-connect">
+  <button class="back" onclick="go('dash')">‹ 返回</button>
+  <div class="bubble">
+    <div class="mascot"></div>
+    <div class="say">把你的社群連起來，我才能幫你「一鍵帶去發」🔗<br>放心，我<b>不會碰你的帳號密碼</b>，是在你自己登入的地方幫你貼，最後你按發佈。</div>
+  </div>
+  <div id="connectList"></div>
+  <div class="post" style="margin-top:14px">
+    <div class="sec-t" style="margin-top:0">運作方式（零帳密）</div>
+    <div style="font-size:13.5px;color:var(--wood);line-height:1.9">
+      1. 白小白幫你寫好「圖＋文」<br>
+      2. 你點「分享到 FB／脆」<br>
+      3. 自動帶你到該平台、內容都填好<br>
+      4. 你看一眼，按發佈 ✅（你帳號的內容你最後把關，最安全）
+    </div>
+  </div>
+</section>
+
+<!-- VIEW: 單篇貼文 -->
+<section class="view" id="v-post">
+  <button class="back" onclick="go('dash')">‹ 返回</button>
+  <div class="bubble">
+    <div class="mascot"></div>
+    <div class="say" id="postHi">這篇我用你的口氣寫好了，看看順不順 👇</div>
+  </div>
+  <div class="post">
+    <div class="head" id="postHead"></div>
+    <div class="body" id="postBody"></div>
+    <div class="tags" id="postTags"></div>
+  </div>
+  <div class="row2">
+    <button class="btn btn-ghost" onclick="copyPost()">📋 複製文案</button>
+    <button class="btn btn-main" id="shareBtn" onclick="sharePost()">分享到 FB</button>
+  </div>
+  <p class="note">最後一步由你按發佈＝你帳號的內容你把關，最安全。</p>
+</section>
+
+<!-- VIEW: 拍照生文 -->
+<section class="view" id="v-photo">
+  <button class="back" onclick="go('dash')">‹ 返回</button>
+  <div class="bubble">
+    <div class="mascot"></div>
+    <div class="say">把今天的作品 / 案場 / 餐點拍給我，<br>我看圖、用你的口氣寫一篇 ✍️</div>
+  </div>
+  <div class="drop" id="drop" onclick="document.getElementById('file').click()">
+    <div class="ic">📷</div>
+    <div class="tx">點一下，選一張照片</div>
+  </div>
+  <input type="file" id="file" accept="image/*" class="hide" onchange="onPhoto(event)">
+  <img class="thumb" id="thumb">
+  <div id="photoResult"></div>
+</section>
+
+<nav>
+  <button class="on" id="n-dash" onclick="go('dash')"><span class="ni">🏠</span>主頁</button>
+  <button id="n-photo" onclick="go('photo')"><span class="ni">📸</span>拍照生文</button>
+  <button id="n-connect" onclick="go('connect')"><span class="ni">🔗</span>帳號</button>
+  <button id="n-cal" onclick="go('today')"><span class="ni">📅</span>今天</button>
+</nav>
+<div class="toast" id="toast"></div>
+<div style="position:fixed;right:8px;bottom:64px;font-size:10px;color:var(--wood);opacity:.7;z-index:5">v0.3.0</div>
+
+<script>
+/* ---------- 產業卡片資料（顧問團蒸餾） ---------- */
+const DATA = {
+  nail:{
+    name:"美甲／美業", icon:"💅", color:"#C77B92",
+    desc:"款式展示、客人眉角、引流私訊",
+    hi:"妳好呀～做美甲的對吧 💅 妳的語氣我抓得很準：親切、好聊、像在跟姊妹說話。下面是我幫妳排的 14 天。",
+    cal:[
+      ["介紹","FB","嗨，我是把妳的手當作品在顧的那個人"],
+      ["Hook吸睛","IG","做美甲三年，最怕客人講這一句話"],
+      ["互動","脆","妳指甲都做多久卸一次？我猜八成的人都拖太久"],
+      ["款式展示","IG","七月最常被指定的三款奶茶色"],
+      ["知識權威","FB","光療傷不傷指甲？一次講清楚"],
+      ["引流","IG","看手型配款式，留言「手型」我私訊妳"],
+      ["故事信任","脆","她生完小孩，第一次為自己花這筆錢"],
+      ["季節主題","FB","夏天到海邊，這幾個顏色拍照超加分"],
+      ["互動","IG","1 號還 2 號？妳會選哪一款"],
+      ["Hook吸睛","脆","卸甲卸到指甲變薄？問題其實不在光療"],
+      ["款式展示","IG","短指甲也能很美的五款設計"],
+      ["引流","FB","連假前最後補位，留言「補位」搶名額"],
+      ["個人日常","脆","為什麼我從上班族跑來做美甲"],
+      ["促銷","IG","七月新客體驗價，只開 8 個名額"],
+    ],
+    sample:{
+      用意:"引流", 平台:"IG",
+      body:"欸這款最近真的被問爆💅\n\n很多水水傳訊息問我「我手比較短／手指比較肉，可以做這種嗎？」\n\n老實說可以，但要挑對暈染的位置跟顏色深淺，挑對了手指會顯長、整隻手都跟著乾淨，挑錯反而會卡卡的。\n\n這沒辦法一句話講完，因為每個人的手型不一樣🤍\n\n想知道這款適不適合妳的手，留言「手型」，我一個一個私訊妳，跟妳說怎麼調最適合👇",
+      tags:"#奶茶色美甲 #暈染美甲 #台中美甲 #光療美甲 #美甲推薦"
+    },
+    photo:{
+      用意:"引流", 平台:"IG",
+      body:"這款奶茶色暈染，是這週做最多次的一款💅\n\n看起來很簡單，其實最考驗「顏色濃淡的銜接」——銜接好，手指顯長又乾淨；銜接不好，就會一塊一塊的。\n\n素色控、上班族、不想太高調的妳，這款最安全又有質感🤍\n\n想做同款的，留言「奶茶」，我私訊妳怎麼配妳的膚色👇",
+      tags:"#奶茶色美甲 #暈染 #簡約美甲 #光療美甲 #美甲日常"
+    }
+  },
+  rent:{
+    name:"包租代管／房東服務", icon:"🏠", color:"#2E5040",
+    desc:"退租翻新、房東知識、估租引流",
+    hi:"你好。做包租代管的對吧。你的語氣我設成沉穩、講真話、短句一句一行，不喊口號。下面這 14 天我都排好了。",
+    cal:[
+      ["介紹","FB","我們不是仲介，做的是「整理到能租、做完幫你管」"],
+      ["Hook吸睛","FB","房客退租那天，我在那間套房站了五分鐘"],
+      ["知識權威","FB","押金能扣什麼、不能扣什麼，條例寫得很清楚"],
+      ["互動","FB","你當房東最怕哪一種房客？"],
+      ["真實案場","FB","屋齡 28 年的老公寓，花 11 天整理完"],
+      ["故事信任","FB","七十歲的房東，把空了兩年的三間房交給我"],
+      ["知識權威","FB","報稅季，租金收入到底怎麼報才不會被補稅"],
+      ["行業內幕","FB","「包租」和「代管」差在哪，別再被話術繞"],
+      ["引流","FB","想知道你的房子整理完能租多少？留言「估租」"],
+      ["真實案場","FB","那間有壁癌的房，房東原本要賠售"],
+      ["創業心路","FB","從做裝修到幫人管房，我為什麼多走這一步"],
+      ["互動","FB","一間房空一個月，你算過損失多少嗎"],
+      ["知識權威","FB","簽約前一定要拍的五個地方，省下日後扯皮"],
+      ["促銷","FB","七月接管免收第一個月管理費，只收三間"],
+    ],
+    sample:{
+      用意:"Hook吸睛", 平台:"FB",
+      body:"房客退租那天，我在那間套房站了五分鐘沒講話。\n\n不是氣，是有點感慨。\n\n牆角一片壁癌，從天花板暈下來。\n廚房的油垢厚到指甲摳得出痕跡。\n冷氣濾網兩年沒洗，打開像棉被。\n\n房東阿姨人在台中，房子在新北，三年沒進來過。\n\n我們花了九天，抓壁癌、重新批土上漆、換濾網、廚房深層清。\n\n現在那間房，比她當初買的時候還乾淨，租金從一萬二調到一萬四，三天就租掉。\n\n房子不是租不掉，是沒人幫它整理到「能租」的樣子。\n\n你家那間空著的房，有多久沒進去看了？",
+      tags:"#包租代管 #退租翻新 #房東 #輕裝修 #鑰匙交給我租金交給你"
+    },
+    photo:{
+      用意:"真實案場", 平台:"FB",
+      body:"這是今天交屋的一間。\n\n上一個房客走的時候，地上一層灰、菸蒂、垃圾。屋主人在外地，只說了句「麻煩你了」。\n\n我們把地板清到能光腳走、每個角落擦過一遍，再拍照回報給他。\n\n我做的不是打掃，是讓一個不在現場的屋主，能放心。\n\n你交出去的房子，是真的有人在替你顧，還是只是租出去而已？\n\n──好厝安居",
+      tags:"#包租代管 #退租清潔 #房東服務 #資產守護"
+    }
+  },
+  realtor:{
+    name:"房仲／不動產", icon:"🔑", color:"#2E4F6A",
+    desc:"成交故事、行情知識、看屋引流",
+    hi:"你好，做房仲的對吧。你的語氣我設成專業又有溫度、講真話不浮誇、不亂保證。這 14 天的內容我排好了。",
+    cal:[
+      ["介紹","FB","為什麼我從別行轉做房仲，我只想做一種服務"],
+      ["知識權威","FB","頭期款到底要準備多少？自住客一次算給你看"],
+      ["故事信任","FB","帶看 27 間，我反而勸他們先別買的那一天"],
+      ["互動","FB","買房你最先看哪一項？留言告訴我"],
+      ["區域行情","FB","這區這半年成交區間，老社區與新案差在哪"],
+      ["Hook吸睛","FB","仲介不會主動講的 3 件事"],
+      ["引流","FB","區行情懶人包做好了，留言「行情」我私訊你"],
+      ["看屋現場","FB","實走一間電梯兩房，這 2 個缺點我老實說"],
+      ["知識權威","FB","實價登錄怎麼看才不被美化價誤導"],
+      ["故事信任","FB","換屋族最怕的「賣不掉又怕買貴」我怎麼幫他排"],
+      ["自我品牌","FB","我做房仲的三條底線，踩到我寧可不成交"],
+      ["互動","FB","你買房卡關在哪一步？留言我一條一條回"],
+      ["促銷","FB","本週新進一間自住換屋首選，想看留言「看屋」"],
+      ["引流","FB","簽約前該檢查的 8 件事清單，留言「簽約」"],
+    ],
+    sample:{
+      用意:"故事信任", 平台:"FB",
+      body:"帶看到第 27 間的那天，我跟這對小夫妻說：「我建議你們先別買。」\n\n他們看上的是一間屋齡 5 年的電梯兩房，採光好、格局方正，價格也在行情內。一切看起來都對。\n\n但聊到後面我才知道，太太年底想換工作、可能搬區，先生的頭期款有一部分是跟長輩先借的。我把每月房貸、管理費加上開銷攤開算，月付會吃掉收入快一半，工作還沒定。\n\n房子很好，但時機對他們不對。\n\n我說：再等半年，等你太太工作定了、頭期款補回來，我幫你們從頭找。房子不會跑，但勉強揹了，日子會很緊。\n\n後來他們真的等了。半年後成交那間，更適合他們，月付也輕鬆。\n\n我少賺一筆？短期看是。但這對夫妻後來介紹了三組朋友給我。\n\n房仲不是把房子賣掉就好，是讓你買得安心、住得下去。",
+      tags:"#房仲日常 #買房不踩雷 #自住客 #換屋 #首購族"
+    },
+    photo:{
+      用意:"看屋現場", 平台:"FB",
+      body:"今天實走一間，老實說優缺點。\n\n優點：採光真的好，三面採光、整天不用開燈；格局方正好擺傢俱，沒有浪費的走道。\n\n缺點我也講：屋齡有了，管線建議重拉；面巷子，假日會有點人聲。\n\n房子沒有完美的，只有「適不適合你」。在意安靜的，這間要再想；重採光、預算有限的，這間值得看。\n\n想知道這類物件的行情跟細節，留言「看屋」，我私訊你👇",
+      tags:"#看屋筆記 #在地房仲 #買房 #自住 #區域行情"
+    }
+  }
+};
+
+/* ---------- 渲染 ---------- */
+let cur=null;
+const $=id=>document.getElementById(id);
+
+function renderIndustries(){
+  const box=$("industryPick"); box.innerHTML="";
+  Object.entries(DATA).forEach(([k,d])=>{
+    const el=document.createElement("div");
+    el.className="indus";
+    el.onclick=()=>selectIndustry(k);
+    el.innerHTML=`<div class="ico" style="background:${d.color}">${d.icon}</div>
+      <div><div class="nm">${d.name}</div><div class="ds">${d.desc}</div></div>
+      <div class="go">›</div>`;
+    box.appendChild(el);
+  });
+}
+function selectIndustry(k){ cur=k; const d=DATA[k];
+  $("dashHi").innerHTML=d.hi;
+  renderCalendar();
+  go('dash');
+}
+function renderCalendar(){
+  const d=DATA[cur], box=$("calendar"); box.innerHTML="";
+  d.cal.forEach((row,i)=>{
+    const[用意,plat,ti]=row;
+    const el=document.createElement("div");
+    el.className="day"; el.onclick=()=>openPost(i);
+    el.innerHTML=`<div class="top"><span class="dn">Day ${i+1}</span>
+      <span class="badge b-plat">${plat}</span>
+      <span class="pill">${用意}</span></div>
+      <div class="meta">${ti}</div>`;
+    box.appendChild(el);
+  });
+}
+function openPost(i){
+  const d=DATA[cur];
+  // Day 用 sample 當完整示範（第一篇引流/Hook），其餘用該日題目組裝
+  const row=d.cal[i]; const[用意,plat,ti]=row;
+  let post = (i===0 || 用意===d.sample.用意) ? d.sample : {用意,平台:plat,
+    body:`${ti}\n\n（白小白會用你的口氣，依「${用意}」把這篇完整寫出來。這是示範版骨架——接上模型後即時生成。）`,
+    tags:d.sample.tags};
+  $("postHead").innerHTML=`<span class="badge b-plat">${post.平台||plat}</span>
+    <span class="pill">用意：${post.用意||用意}</span>`;
+  $("postBody").textContent=post.body;
+  $("postTags").textContent=post.tags;
+  $("postHi").textContent="這篇我用你的口氣寫好了，看看順不順 👇";
+  const pl=post.平台||plat;
+  window._copy=post.body+"\n\n"+post.tags; window._plat=pl;
+  const sb=$("shareBtn"); if(sb) sb.textContent="分享到 "+(pl.includes("脆")||pl.includes("Threads")?"脆":pl.includes("IG")?"IG":"FB");
+  go('post');
+}
+function openToday(){ openPost(0); }
+
+/* 拍照生文 demo */
+function onPhoto(e){
+  const f=e.target.files[0]; if(!f)return;
+  const url=URL.createObjectURL(f);
+  const im=$("thumb"); im.src=url; im.style.display="block";
+  const r=$("photoResult");
+  r.innerHTML=`<div class="bubble" style="margin-top:16px"><div class="mascot"></div>
+    <div class="say typing">白小白看圖中… ✍️</div></div>`;
+  setTimeout(()=>{
+    const p=DATA[cur].photo;
+    r.innerHTML=`<div class="bubble" style="margin-top:16px"><div class="mascot"></div>
+      <div class="say">看懂囉～我用你的口氣寫了一篇「${p.用意}」的 👇</div></div>
+      <div class="post"><div class="head">
+        <span class="badge b-plat">${p.平台}</span>
+        <span class="pill">用意：${p.用意}</span></div>
+        <div class="body">${p.body.replace(/\n/g,"<br>")}</div>
+        <div class="tags">${p.tags}</div></div>
+      <div class="row2">
+        <button class="btn btn-ghost" onclick="window._copy=\`${(p.body+"\\n\\n"+p.tags).replace(/`/g,'')}\`;copyPost()">📋 複製文案</button>
+        <button class="btn btn-main" onclick="fakePublish()">分享到 FB</button></div>`;
+  },1400);
+}
+
+/* 動作 */
+function copyPost(){
+  navigator.clipboard?.writeText(window._copy||"").then(()=>toast("已複製，貼到 FB 就行 🤍"),()=>toast("已複製"));
+  toast("已複製，貼到 FB 就行 🤍");
+}
+function fakePublish(){ toast("示範版：接上你的 FB 後，這裡會直接帶你發佈 🚀"); }
+function toast(t){ const el=$("toast"); el.textContent=t; el.classList.add("show");
+  clearTimeout(window._tt); window._tt=setTimeout(()=>el.classList.remove("show"),2200); }
+
+/* ---------- 帳號連結模組 ---------- */
+const PLATFORMS=[
+  {k:"fb", name:"Facebook 個人頁", icon:"f", color:"#1877F2", on:true},
+  {k:"threads", name:"Threads（脆）", icon:"@", color:"#000000", on:true},
+  {k:"ig", name:"Instagram", icon:"📷", color:"#C13584", on:false, soon:true},
+];
+const conn={fb:false, threads:false, ig:false};
+function renderConnect(){
+  const box=$("connectList"); box.innerHTML="";
+  PLATFORMS.forEach(p=>{
+    const el=document.createElement("div");
+    el.className="indus"; el.style.cursor="default";
+    el.innerHTML=`<div class="ico" style="background:${p.color};font-size:20px">${p.icon}</div>
+      <div><div class="nm">${p.name}</div>
+        <div class="ds" id="st-${p.k}">${p.soon?"即將推出":(conn[p.k]?"已連結 ✅":"尚未連結")}</div></div>
+      <div style="margin-left:auto">${p.soon?'<span class="pill">敬請期待</span>':
+        `<button class="btn" id="cb-${p.k}" style="margin:0;padding:8px 14px;width:auto;font-size:13px;${conn[p.k]?'background:#fff;border:1.5px solid var(--gold);color:var(--walnut)':'background:'+p.color+';color:#fff'}" onclick="toggleConn('${p.k}')">${conn[p.k]?"已連結":"連結"}</button>`}</div>`;
+    box.appendChild(el);
+  });
+}
+function toggleConn(k){
+  conn[k]=!conn[k];
+  toast(conn[k]?"連結成功！之後就能一鍵帶去發 🔗":"已取消連結");
+  renderConnect();
+}
+
+/* ---------- 輸入想法生文 ---------- */
+const PURPOSES=["引流","促銷","知識權威","故事信任","互動","介紹"];
+let pickedPurpose="引流";
+function renderPurpose(){
+  const box=$("ideaPurpose"); box.innerHTML="";
+  PURPOSES.forEach(p=>{
+    const s=document.createElement("span");
+    s.className="pill"; s.style.cursor="pointer";
+    if(p===pickedPurpose){s.style.background="var(--walnut)";s.style.color="#fff";s.style.borderColor="var(--walnut)";}
+    s.textContent=p; s.onclick=()=>{pickedPurpose=p;renderPurpose();};
+    box.appendChild(s);
+  });
+}
+function genFromIdea(){
+  const idea=($("ideaIn").value||"").trim();
+  if(!idea){toast("先打一句你的想法給我 🐱");return;}
+  const d=DATA[cur];
+  const post={用意:pickedPurpose, 平台:"FB",
+    body:`${idea}\n\n（白小白會用你的口氣，把這個想法寫成一篇「${pickedPurpose}」的完整貼文。這是示範骨架——接上模型後即時生成你專屬的版本。）`,
+    tags:d.sample.tags};
+  $("postHead").innerHTML=`<span class="badge b-plat">FB</span><span class="pill">用意：${pickedPurpose}</span>`;
+  $("postBody").textContent=post.body;
+  $("postTags").textContent=post.tags;
+  $("postHi").textContent="這是照你的想法寫的，看看順不順 👇";
+  window._copy=post.body+"\n\n"+post.tags; window._plat="FB";
+  go('post');
+}
+
+/* ---------- 平台感知分享 ---------- */
+function sharePost(){
+  const p=window._plat||"FB";
+  const ok=(p==="脆"||p==="Threads")?conn.threads:conn.fb;
+  if(!ok){ toast("還沒連結"+(p.includes("脆")?"脆":"FB")+"，先去「帳號」連結一下 🔗");
+    setTimeout(()=>go('connect'),700); return; }
+  toast("示範版：接上後這裡會直接帶你到 "+p+" 發佈 🚀");
+}
+
+/* 路由 */
+function go(v){
+  // 新手保護：還沒選產業就點需要產業的分頁 → 先請他選
+  if(!cur && ['dash','photo','today','post'].includes(v)){
+    toast('先選你的行業，白小白才知道怎麼幫你 🐱');
+    document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
+    $("v-home").classList.add("on");
+    document.querySelectorAll("nav button").forEach(b=>b.classList.remove("on"));
+    window.scrollTo(0,0); return;
+  }
+  document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
+  const map={home:"v-home",dash:"v-dash",post:"v-post",photo:"v-photo",connect:"v-connect",today:"v-post"};
+  if(v==='today'){ openToday(); return; }
+  $(map[v]).classList.add("on");
+  document.querySelectorAll("nav button").forEach(b=>b.classList.remove("on"));
+  if(v==='dash')$("n-dash").classList.add("on");
+  if(v==='photo')$("n-photo").classList.add("on");
+  if(v==='connect')$("n-connect").classList.add("on");
+  if(v==='post')$("n-cal").classList.add("on");
+  window.scrollTo(0,0);
+}
+
+renderIndustries();
+renderConnect();
+renderPurpose();
+</script>
+</body>
+</html>
