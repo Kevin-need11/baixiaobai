@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <!-- 白小白・你的貼文小助手 | 好厝安居 出品
-     版本 v0.4.1 (2026-06-24) | 升級紀錄見 CHANGELOG.md
+     版本 v0.4.2 (2026-06-24) | 升級紀錄見 CHANGELOG.md
+     v0.4.2 修 bug：點 Day 1／今天 會跑出別天的貼文（封測前 QA）
      v0.4.1 用語白話化：「蒸餾」→「讓白小白學我的口氣」
      v0.4.0 學你的口氣＋拍照可選平台/用意
      v0.3.0 帳號連結模組＋輸入想法生文＋平台分享
@@ -237,7 +238,7 @@
   <button id="n-cal" onclick="go('today')"><span class="ni">📅</span>今天</button>
 </nav>
 <div class="toast" id="toast"></div>
-<div style="position:fixed;right:8px;bottom:64px;font-size:10px;color:var(--wood);opacity:.7;z-index:5">v0.4.1</div>
+<div style="position:fixed;right:8px;bottom:64px;font-size:10px;color:var(--wood);opacity:.7;z-index:5">v0.4.2</div>
 
 <script>
 /* ---------- 產業卡片資料（顧問團蒸餾） ---------- */
@@ -371,11 +372,15 @@ function renderCalendar(){
     box.appendChild(el);
   });
 }
+// sample 對應的那一天（用意＋平台都吻合的第一筆）；找不到回 -1
+function sampleIndex(d){
+  return d.cal.findIndex(r => r[0]===d.sample.用意 && r[1]===d.sample.平台);
+}
 function openPost(i){
   const d=DATA[cur];
-  // Day 用 sample 當完整示範（第一篇引流/Hook），其餘用該日題目組裝
+  // 只有「對應 sample 的那一天」顯示完整示範貼文，其餘用該日自己的題目組裝骨架，避免卡片標題與內容對不上
   const row=d.cal[i]; const[用意,plat,ti]=row;
-  let post = (i===0 || 用意===d.sample.用意) ? d.sample : {用意,平台:plat,
+  let post = (i===sampleIndex(d)) ? d.sample : {用意,平台:plat,
     body:`${ti}\n\n（白小白會用你的口氣，依「${用意}」把這篇完整寫出來。這是示範版骨架——接上模型後即時生成。）`,
     tags:d.sample.tags};
   $("postHead").innerHTML=`<span class="badge b-plat">${post.平台||plat}</span>
@@ -388,7 +393,7 @@ function openPost(i){
   const sb=$("shareBtn"); if(sb) sb.textContent="分享到 "+(pl.includes("脆")||pl.includes("Threads")?"脆":pl.includes("IG")?"IG":"FB");
   go('post');
 }
-function openToday(){ openPost(0); }
+function openToday(){ const d=DATA[cur]; const si=sampleIndex(d); openPost(si>=0?si:0); }
 
 /* 拍照生文 — 可選平台＋用意 */
 const PHOTO_PLATS=["FB","脆","IG"];
