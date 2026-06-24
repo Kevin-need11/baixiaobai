@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <!-- 白小白・你的貼文小助手 | 好厝安居 出品
-     版本 v0.3.0 (2026-06-24) | 升級紀錄見 CHANGELOG.md
+     版本 v0.4.0 (2026-06-24) | 升級紀錄見 CHANGELOG.md
+     v0.4.0 蒸餾自己語氣＋拍照可選平台/用意
      v0.3.0 帳號連結模組＋輸入想法生文＋平台分享
      v0.2.0 小白白貓形象  /  v0.1.0 MVP 首版 -->
 <html lang="zh-Hant">
@@ -120,7 +121,31 @@
     <div class="say">嗨～我是<b>白小白</b> 🤍<br>每天幫你想好一篇貼文、用你的口氣寫，你點一下就發。<br>先告訴我，你是做哪一行的？</div>
   </div>
   <div class="pick" id="industryPick"></div>
+  <div class="indus" style="margin-top:13px;border-style:dashed" onclick="go('distill')">
+    <div class="ico" style="background:var(--gold);font-size:22px">✨</div>
+    <div><div class="nm">蒸餾我自己的語氣</div><div class="ds">丟幾篇你寫過的貼文，我學你的口氣</div></div>
+    <div class="go">›</div>
+  </div>
   <p class="note">免費版：每天自動幫你準備 1 篇。升級可解鎖多篇＋自動發文。</p>
+</section>
+
+<!-- VIEW: 蒸餾自己語氣 -->
+<section class="view" id="v-distill">
+  <button class="back" onclick="go('home')">‹ 返回</button>
+  <div class="bubble">
+    <div class="mascot"></div>
+    <div class="say">把你<b>自己寫過的</b> 2～5 篇貼文貼進來 🐱<br>我會學你的句子長短、習慣用語、口氣，之後都用「你的味道」幫你寫。</div>
+  </div>
+  <textarea id="distillIn" placeholder="把你以前發過的貼文，一篇一篇貼進來（用空行隔開）…"
+    style="width:100%;border:1.5px solid var(--line);border-radius:13px;padding:12px;font-family:inherit;
+    font-size:14px;min-height:150px;resize:vertical;background:#fff"></textarea>
+  <div class="post" style="margin-top:12px;background:#fffaf2;border-color:var(--gold)">
+    <div style="font-size:12.5px;color:var(--wood);line-height:1.85">
+      ⚠️ <b>請貼「你本人」寫的文</b>。若放入他人的文案，相關著作權與責任由你自行承擔，本服務不負責。
+    </div>
+  </div>
+  <button class="btn btn-main" onclick="startDistill()">✨ 開始蒸餾我的語氣</button>
+  <div id="distillResult"></div>
 </section>
 
 <!-- VIEW: 主控台 -->
@@ -189,8 +214,12 @@
   <button class="back" onclick="go('dash')">‹ 返回</button>
   <div class="bubble">
     <div class="mascot"></div>
-    <div class="say">把今天的作品 / 案場 / 餐點拍給我，<br>我看圖、用你的口氣寫一篇 ✍️</div>
+    <div class="say">把作品 / 案場 / 餐點拍給我 📷<br>先選「要發哪個平台、想要什麼用意」，我看圖用你的口氣寫。</div>
   </div>
+  <div style="font-size:13px;color:var(--wood);margin:2px 0 5px">發到哪個平台</div>
+  <div id="photoPlat" style="margin-bottom:8px"></div>
+  <div style="font-size:13px;color:var(--wood);margin:2px 0 5px">這篇的用意（主題）</div>
+  <div id="photoPurpose" style="margin-bottom:12px"></div>
   <div class="drop" id="drop" onclick="document.getElementById('file').click()">
     <div class="ic">📷</div>
     <div class="tx">點一下，選一張照片</div>
@@ -207,7 +236,7 @@
   <button id="n-cal" onclick="go('today')"><span class="ni">📅</span>今天</button>
 </nav>
 <div class="toast" id="toast"></div>
-<div style="position:fixed;right:8px;bottom:64px;font-size:10px;color:var(--wood);opacity:.7;z-index:5">v0.3.0</div>
+<div style="position:fixed;right:8px;bottom:64px;font-size:10px;color:var(--wood);opacity:.7;z-index:5">v0.4.0</div>
 
 <script>
 /* ---------- 產業卡片資料（顧問團蒸餾） ---------- */
@@ -360,7 +389,30 @@ function openPost(i){
 }
 function openToday(){ openPost(0); }
 
-/* 拍照生文 demo */
+/* 拍照生文 — 可選平台＋用意 */
+const PHOTO_PLATS=["FB","脆","IG"];
+let pickedPhotoPlat="FB", pickedPhotoPurpose="引流";
+function renderPhotoPlat(){
+  const box=$("photoPlat"); box.innerHTML="";
+  PHOTO_PLATS.forEach(pl=>{
+    const k=pl==="脆"?"threads":pl==="IG"?"ig":"fb";
+    const s=document.createElement("span"); s.className="pill"; s.style.cursor="pointer";
+    const connected=conn[k]; const soon=(k==="ig");
+    if(pl===pickedPhotoPlat){s.style.background="var(--walnut)";s.style.color="#fff";s.style.borderColor="var(--walnut)";}
+    s.innerHTML=pl+(soon?"（未開放）":connected?" ✅":"");
+    s.onclick=()=>{ if(soon){toast("IG 之後才開放喔 🐱");return;} pickedPhotoPlat=pl; renderPhotoPlat(); };
+    box.appendChild(s);
+  });
+}
+function renderPhotoPurpose(){
+  const box=$("photoPurpose"); box.innerHTML="";
+  PURPOSES.forEach(p=>{
+    const s=document.createElement("span"); s.className="pill"; s.style.cursor="pointer";
+    if(p===pickedPhotoPurpose){s.style.background="var(--walnut)";s.style.color="#fff";s.style.borderColor="var(--walnut)";}
+    s.textContent=p; s.onclick=()=>{pickedPhotoPurpose=p;renderPhotoPurpose();};
+    box.appendChild(s);
+  });
+}
 function onPhoto(e){
   const f=e.target.files[0]; if(!f)return;
   const url=URL.createObjectURL(f);
@@ -369,17 +421,23 @@ function onPhoto(e){
   r.innerHTML=`<div class="bubble" style="margin-top:16px"><div class="mascot"></div>
     <div class="say typing">白小白看圖中… ✍️</div></div>`;
   setTimeout(()=>{
-    const p=DATA[cur].photo;
+    const base=DATA[cur].photo;
+    const plat=pickedPhotoPlat, 用意=pickedPhotoPurpose;
+    // demo：以該產業的看圖文為底，套上使用者選的用意/平台
+    const body = (用意===base.用意) ? base.body
+      : base.body+`\n\n（白小白會把這張圖改寫成「${用意}」版本，並依「${plat}」調整長度與語氣——接上模型後即時生成。）`;
+    const connK = plat==="脆"?"threads":plat==="IG"?"ig":"fb";
     r.innerHTML=`<div class="bubble" style="margin-top:16px"><div class="mascot"></div>
-      <div class="say">看懂囉～我用你的口氣寫了一篇「${p.用意}」的 👇</div></div>
+      <div class="say">看懂囉～我用你的口氣，幫你寫了一篇要發到「${plat}」的「${用意}」文 👇</div></div>
       <div class="post"><div class="head">
-        <span class="badge b-plat">${p.平台}</span>
-        <span class="pill">用意：${p.用意}</span></div>
-        <div class="body">${p.body.replace(/\n/g,"<br>")}</div>
-        <div class="tags">${p.tags}</div></div>
+        <span class="badge b-plat">${plat}</span>
+        <span class="pill">用意：${用意}</span></div>
+        <div class="body">${body.replace(/\n/g,"<br>")}</div>
+        <div class="tags">${base.tags}</div></div>
       <div class="row2">
-        <button class="btn btn-ghost" onclick="window._copy=\`${(p.body+"\\n\\n"+p.tags).replace(/`/g,'')}\`;copyPost()">📋 複製文案</button>
-        <button class="btn btn-main" onclick="fakePublish()">分享到 FB</button></div>`;
+        <button class="btn btn-ghost" onclick="window._copy=\`${(body+"\\n\\n"+base.tags).replace(/[\\\`]/g,'')}\`;copyPost()">📋 複製文案</button>
+        <button class="btn btn-main" onclick="window._plat='${plat}';sharePost()">分享到 ${plat}</button></div>
+      ${conn[connK]?"":`<p class="note">尚未連結 ${plat}，發佈前先到「帳號」連結一下 🔗</p>`}`;
   },1400);
 }
 
@@ -455,6 +513,42 @@ function sharePost(){
   toast("示範版：接上後這裡會直接帶你到 "+p+" 發佈 🚀");
 }
 
+/* ---------- 蒸餾自己語氣 ---------- */
+const DEFAULT_CAL=[
+  ["介紹","FB","我是誰、為什麼做這一行"],
+  ["故事信任","FB","一個讓我印象深刻的客人/經驗"],
+  ["知識權威","FB","這行你可能不知道的 3 件事"],
+  ["互動","脆","一個我想問大家的問題"],
+  ["引流","IG","想了解的留言關鍵字，我私訊你"],
+  ["Hook吸睛","FB","很多人對這行的一個誤會"],
+  ["故事信任","脆","今天現場發生的一個小故事"],
+  ["知識權威","FB","選我這種服務前，該注意的事"],
+  ["促銷","IG","這檔限量/限時，想要的快留言"],
+  ["互動","脆","二選一：你會選 A 還是 B"],
+  ["介紹","FB","我的堅持與底線"],
+  ["故事信任","FB","一句客人說過、我記到現在的話"],
+  ["引流","FB","整理了一份懶人包，留言我私你"],
+  ["促銷","IG","本週主打，名額有限"],
+];
+function startDistill(){
+  const txt=($("distillIn").value||"").trim();
+  if(txt.replace(/\s/g,'').length<20){ toast("多貼幾篇你自己的文，我才學得準 🐱"); return; }
+  const r=$("distillResult");
+  r.innerHTML='<div class="bubble" style="margin-top:14px"><div class="mascot"></div><div class="say typing">白小白學習中…分析你的句子、用語、口氣 ✍️</div></div>';
+  setTimeout(()=>{
+    const emoji=(txt.match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu)||[]).length;
+    const lines=txt.split(/\n+/).filter(x=>x.trim());
+    const avg=Math.round(txt.replace(/\s/g,'').length/Math.max(lines.length,1));
+    const longish=avg>40;
+    const first=DATA[Object.keys(DATA).filter(k=>k!=='mine')[0]];
+    DATA.mine={ name:"我的語氣（蒸餾）", icon:"✨", color:"#6B4C3B", desc:"用你自己的口氣",
+      hi:"我學會你的語氣了 🐱 你的特點：句子"+(longish?"偏長、":"簡短、")+(emoji>2?"愛用 emoji":"少用 emoji")+"。之後都用『你的味道』幫你寫。下面是幫你排的 14 天。",
+      cal:DEFAULT_CAL, sample:first.sample, photo:first.photo };
+    r.innerHTML='<div class="bubble" style="margin-top:14px"><div class="mascot"></div><div class="say">學好了！我抓到你的特點：<b>句子'+(longish?'偏長':'簡短')+'、'+(emoji>2?'常用 emoji':'少用 emoji')+'</b>。<br>（測試版用示範分析；接上模型後會真的逐句學你的語氣）</div></div>'+
+      '<button class="btn btn-main" onclick="cur=\'mine\';document.getElementById(\'dashHi\').innerHTML=DATA.mine.hi;renderCalendar();go(\'dash\')">用我的語氣開始 →</button>';
+  },1600);
+}
+
 /* 路由 */
 function go(v){
   // 新手保護：還沒選產業就點需要產業的分頁 → 先請他選
@@ -466,10 +560,11 @@ function go(v){
     window.scrollTo(0,0); return;
   }
   document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
-  const map={home:"v-home",dash:"v-dash",post:"v-post",photo:"v-photo",connect:"v-connect",today:"v-post"};
+  const map={home:"v-home",dash:"v-dash",post:"v-post",photo:"v-photo",connect:"v-connect",distill:"v-distill",today:"v-post"};
   if(v==='today'){ openToday(); return; }
   $(map[v]).classList.add("on");
   document.querySelectorAll("nav button").forEach(b=>b.classList.remove("on"));
+  if(v==='photo'){ renderPhotoPlat(); renderPhotoPurpose(); }
   if(v==='dash')$("n-dash").classList.add("on");
   if(v==='photo')$("n-photo").classList.add("on");
   if(v==='connect')$("n-connect").classList.add("on");
@@ -480,6 +575,8 @@ function go(v){
 renderIndustries();
 renderConnect();
 renderPurpose();
+renderPhotoPlat();
+renderPhotoPurpose();
 </script>
 </body>
 </html>
