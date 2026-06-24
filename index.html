@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <!-- 白小白・你的貼文小助手 | 好厝安居 出品
-     版本 v0.4.2 (2026-06-24) | 升級紀錄見 CHANGELOG.md
+     版本 v0.4.3 (2026-06-24) | 升級紀錄見 CHANGELOG.md
+     v0.4.3 修：通用「我的口氣」版不再借用美甲 hashtag
      v0.4.2 修 bug：點 Day 1／今天 會跑出別天的貼文（封測前 QA）
      v0.4.1 用語白話化：「蒸餾」→「讓白小白學我的口氣」
      v0.4.0 學你的口氣＋拍照可選平台/用意
@@ -238,7 +239,7 @@
   <button id="n-cal" onclick="go('today')"><span class="ni">📅</span>今天</button>
 </nav>
 <div class="toast" id="toast"></div>
-<div style="position:fixed;right:8px;bottom:64px;font-size:10px;color:var(--wood);opacity:.7;z-index:5">v0.4.2</div>
+<div style="position:fixed;right:8px;bottom:64px;font-size:10px;color:var(--wood);opacity:.7;z-index:5">v0.4.3</div>
 
 <script>
 /* ---------- 產業卡片資料（顧問團蒸餾） ---------- */
@@ -546,10 +547,12 @@ function startDistill(){
     const lines=txt.split(/\n+/).filter(x=>x.trim());
     const avg=Math.round(txt.replace(/\s/g,'').length/Math.max(lines.length,1));
     const longish=avg>40;
-    const first=DATA[Object.keys(DATA).filter(k=>k!=='mine')[0]];
+    // 通用「我的口氣」版不綁任何產業：sample 用意/平台留空＝不對應任何一天（全部走骨架）、tags 留空，避免借用美甲等產業的 hashtag
     DATA.mine={ name:"我的口氣", icon:"✨", color:"#6B4C3B", desc:"用你自己的口氣",
       hi:"我學會你的語氣了 🐱 你的特點：句子"+(longish?"偏長、":"簡短、")+(emoji>2?"愛用 emoji":"少用 emoji")+"。之後都用『你的味道』幫你寫。下面是幫你排的 14 天。",
-      cal:DEFAULT_CAL, sample:first.sample, photo:first.photo };
+      cal:DEFAULT_CAL,
+      sample:{用意:"",平台:"",body:"",tags:""},
+      photo:{用意:"真實案場",平台:"FB",body:"把這張照片的重點講給白小白，接上模型後我會用你的口氣寫成一篇完整貼文。",tags:""} };
     r.innerHTML='<div class="bubble" style="margin-top:14px"><div class="mascot"></div><div class="say">學好了！我抓到你的特點：<b>句子'+(longish?'偏長':'簡短')+'、'+(emoji>2?'常用 emoji':'少用 emoji')+'</b>。<br>（測試版用示範分析；接上模型後會真的逐句學你的語氣）</div></div>'+
       '<button class="btn btn-main" onclick="cur=\'mine\';document.getElementById(\'dashHi\').innerHTML=DATA.mine.hi;renderCalendar();go(\'dash\')">用我的語氣開始 →</button>';
   },1600);
