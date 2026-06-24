@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <!-- 白小白・你的貼文小助手 | 好厝安居 出品
-     版本 v0.4.0 (2026-06-24) | 升級紀錄見 CHANGELOG.md
-     v0.4.0 蒸餾自己語氣＋拍照可選平台/用意
+     版本 v0.4.1 (2026-06-24) | 升級紀錄見 CHANGELOG.md
+     v0.4.1 用語白話化：「蒸餾」→「讓白小白學我的口氣」
+     v0.4.0 學你的口氣＋拍照可選平台/用意
      v0.3.0 帳號連結模組＋輸入想法生文＋平台分享
      v0.2.0 小白白貓形象  /  v0.1.0 MVP 首版 -->
 <html lang="zh-Hant">
@@ -123,7 +124,7 @@
   <div class="pick" id="industryPick"></div>
   <div class="indus" style="margin-top:13px;border-style:dashed" onclick="go('distill')">
     <div class="ico" style="background:var(--gold);font-size:22px">✨</div>
-    <div><div class="nm">蒸餾我自己的語氣</div><div class="ds">丟幾篇你寫過的貼文，我學你的口氣</div></div>
+    <div><div class="nm">讓白小白學我的口氣</div><div class="ds">丟幾篇你寫過的貼文，我學你的口氣</div></div>
     <div class="go">›</div>
   </div>
   <p class="note">免費版：每天自動幫你準備 1 篇。升級可解鎖多篇＋自動發文。</p>
@@ -144,7 +145,7 @@
       ⚠️ <b>請貼「你本人」寫的文</b>。若放入他人的文案，相關著作權與責任由你自行承擔，本服務不負責。
     </div>
   </div>
-  <button class="btn btn-main" onclick="startDistill()">✨ 開始蒸餾我的語氣</button>
+  <button class="btn btn-main" onclick="startDistill()">✨ 開始學我的口氣</button>
   <div id="distillResult"></div>
 </section>
 
@@ -236,7 +237,7 @@
   <button id="n-cal" onclick="go('today')"><span class="ni">📅</span>今天</button>
 </nav>
 <div class="toast" id="toast"></div>
-<div style="position:fixed;right:8px;bottom:64px;font-size:10px;color:var(--wood);opacity:.7;z-index:5">v0.4.0</div>
+<div style="position:fixed;right:8px;bottom:64px;font-size:10px;color:var(--wood);opacity:.7;z-index:5">v0.4.1</div>
 
 <script>
 /* ---------- 產業卡片資料（顧問團蒸餾） ---------- */
@@ -541,7 +542,7 @@ function startDistill(){
     const avg=Math.round(txt.replace(/\s/g,'').length/Math.max(lines.length,1));
     const longish=avg>40;
     const first=DATA[Object.keys(DATA).filter(k=>k!=='mine')[0]];
-    DATA.mine={ name:"我的語氣（蒸餾）", icon:"✨", color:"#6B4C3B", desc:"用你自己的口氣",
+    DATA.mine={ name:"我的口氣", icon:"✨", color:"#6B4C3B", desc:"用你自己的口氣",
       hi:"我學會你的語氣了 🐱 你的特點：句子"+(longish?"偏長、":"簡短、")+(emoji>2?"愛用 emoji":"少用 emoji")+"。之後都用『你的味道』幫你寫。下面是幫你排的 14 天。",
       cal:DEFAULT_CAL, sample:first.sample, photo:first.photo };
     r.innerHTML='<div class="bubble" style="margin-top:14px"><div class="mascot"></div><div class="say">學好了！我抓到你的特點：<b>句子'+(longish?'偏長':'簡短')+'、'+(emoji>2?'常用 emoji':'少用 emoji')+'</b>。<br>（測試版用示範分析；接上模型後會真的逐句學你的語氣）</div></div>'+
