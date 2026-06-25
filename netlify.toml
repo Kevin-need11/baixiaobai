@@ -1,0 +1,8 @@
+# 白小白 Netlify 設定
+# 前端是靜態單檔(index.html)，後台一支 Function 代理 Gemini（金鑰放 Netlify 環境變數 GEMINI_API_KEY）
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"

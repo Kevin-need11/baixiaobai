@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <!-- 白小白・你的貼文小助手 | 好厝安居 出品
-     版本 v0.4.3 (2026-06-24) | 升級紀錄見 CHANGELOG.md
+     版本 v0.5.0 (2026-06-25) | 升級紀錄見 CHANGELOG.md
+     v0.5.0 接上真 AI：Netlify Function 代理 Gemini，每日貼文/想法生文/拍照看圖/學口氣全部真即時生成（金鑰只在後台）
      v0.4.3 修：通用「我的口氣」版不再借用美甲 hashtag
      v0.4.2 修 bug：點 Day 1／今天 會跑出別天的貼文（封測前 QA）
      v0.4.1 用語白話化：「蒸餾」→「讓白小白學我的口氣」
@@ -239,7 +240,7 @@
   <button id="n-cal" onclick="go('today')"><span class="ni">📅</span>今天</button>
 </nav>
 <div class="toast" id="toast"></div>
-<div style="position:fixed;right:8px;bottom:64px;font-size:10px;color:var(--wood);opacity:.7;z-index:5">v0.4.3</div>
+<div style="position:fixed;right:8px;bottom:64px;font-size:10px;color:var(--wood);opacity:.7;z-index:5">v0.5.0</div>
 
 <script>
 /* ---------- 產業卡片資料（顧問團蒸餾） ---------- */
@@ -343,6 +344,35 @@ const DATA = {
 let cur=null;
 const $=id=>document.getElementById(id);
 
+/* ---------- 接後台 AI（真即時生成；金鑰在 Netlify 後台，前端碰不到） ---------- */
+const AI_ENDPOINT='/.netlify/functions/generate';
+let learnedStyle='';            // 蒸餾後學到的語氣摘要，注入每次生成
+async function aiGenerate(prompt,image){
+  const res=await fetch(AI_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({prompt,image})});
+  if(!res.ok){ const e=new Error('gen'); e.status=res.status;
+    try{ e.gstatus=(await res.json()).status; }catch(_){} throw e; }
+  const d=await res.json();
+  if(d&&d.error){ const e=new Error(d.error); e.status=d.status||502; throw e; }
+  return (d.text||'').trim();
+}
+function platLen(pl){ pl=pl||'FB';
+  return (pl.includes('脆')||pl.includes('Threads'))?'短句、口語、一段不換行、80字內'
+    :pl.includes('IG')?'中等長度、適合配圖、100字內':'中等長度、120字內'; }
+function styleLine(){ return learnedStyle?`\n模仿這位老闆的語氣特徵（請貼合）：${learnedStyle}`:''; }
+function postPrompt(industry,用意,plat,題目){
+  const ind=(!industry||industry==='我的口氣')?'一位店家老闆':`一家「${industry}」的店家老闆`;
+  return `你是台灣${ind}本人的社群小幫手。用老闆親切、生活化、真實不浮誇的口吻，寫一則要發到「${plat}」的社群貼文，用意是「${用意}」，主題：「${題目}」。${styleLine()}\n繁體中文，${platLen(plat)}。結尾換行後加 3 個相關 hashtag（用空格分隔、放最後一行）。只輸出貼文本身，不要任何解說或標題。`;
+}
+function splitTags(text){
+  const lines=(text||'').trim().split(/\n+/).filter(x=>x.trim());
+  let tags='';
+  if(lines.length && /(^|\s)#/.test(lines[lines.length-1])){ tags=lines.pop().trim(); }
+  return { body:lines.join('\n').trim(), tags };
+}
+function busyMsg(e){ return (e&&(e.status===429||e.gstatus==='RESOURCE_EXHAUSTED'))
+  ?'白小白太多人同時用、喘口氣～幾秒後再點一次 🐱':'即時生成暫時忙線，稍後再試 🐱'; }
+
 function renderIndustries(){
   const box=$("industryPick"); box.innerHTML="";
   Object.entries(DATA).forEach(([k,d])=>{
@@ -377,22 +407,32 @@ function renderCalendar(){
 function sampleIndex(d){
   return d.cal.findIndex(r => r[0]===d.sample.用意 && r[1]===d.sample.平台);
 }
-function openPost(i){
+async function openPost(i){
   const d=DATA[cur];
-  // 只有「對應 sample 的那一天」顯示完整示範貼文，其餘用該日自己的題目組裝骨架，避免卡片標題與內容對不上
   const row=d.cal[i]; const[用意,plat,ti]=row;
-  let post = (i===sampleIndex(d)) ? d.sample : {用意,平台:plat,
-    body:`${ti}\n\n（白小白會用你的口氣，依「${用意}」把這篇完整寫出來。這是示範版骨架——接上模型後即時生成。）`,
-    tags:d.sample.tags};
-  $("postHead").innerHTML=`<span class="badge b-plat">${post.平台||plat}</span>
-    <span class="pill">用意：${post.用意||用意}</span>`;
-  $("postBody").textContent=post.body;
-  $("postTags").textContent=post.tags;
-  $("postHi").textContent="這篇我用你的口氣寫好了，看看順不順 👇";
-  const pl=post.平台||plat;
-  window._copy=post.body+"\n\n"+post.tags; window._plat=pl;
-  const sb=$("shareBtn"); if(sb) sb.textContent="分享到 "+(pl.includes("脆")||pl.includes("Threads")?"脆":pl.includes("IG")?"IG":"FB");
+  $("postHead").innerHTML=`<span class="badge b-plat">${plat}</span>
+    <span class="pill">用意：${用意}</span>`;
+  $("postHi").textContent="白小白用你的口氣幫你寫中…✍️";
+  $("postBody").textContent="生成中，稍等一下下 🐱";
+  $("postTags").textContent="";
+  window._copy=""; window._plat=plat;
+  const sb=$("shareBtn"); if(sb) sb.textContent="分享到 "+(plat.includes("脆")||plat.includes("Threads")?"脆":plat.includes("IG")?"IG":"FB");
   go('post');
+  try{
+    const txt=await aiGenerate(postPrompt(d.name,用意,plat,ti));
+    const {body,tags}=splitTags(txt);
+    $("postBody").textContent=body;
+    $("postTags").textContent=tags||d.sample.tags;
+    $("postHi").textContent="這篇我用你的口氣寫好了，看看順不順 👇";
+    window._copy=body+(tags?"\n\n"+tags:"");
+  }catch(e){
+    // 後台未接上 / 忙線 → 退回示範骨架，不讓畫面卡住
+    const fb=(i===sampleIndex(d))?d.sample:{body:`${ti}\n\n（這天的題目，白小白會用你的口氣依「${用意}」完整寫出來。）`,tags:d.sample.tags};
+    $("postBody").textContent=fb.body;
+    $("postTags").textContent=fb.tags;
+    $("postHi").textContent=busyMsg(e);
+    window._copy=fb.body+"\n\n"+fb.tags;
+  }
 }
 function openToday(){ const d=DATA[cur]; const si=sampleIndex(d); openPost(si>=0?si:0); }
 
@@ -420,6 +460,22 @@ function renderPhotoPurpose(){
     box.appendChild(s);
   });
 }
+function escHtml(s){ return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function photoCard(plat,用意,body,tags){
+  const connK = plat==="脆"?"threads":plat==="IG"?"ig":"fb";
+  window._copy=body+(tags?"\n\n"+tags:""); window._plat=plat;
+  return `<div class="bubble" style="margin-top:16px"><div class="mascot"></div>
+      <div class="say">看懂囉～我用你的口氣，幫你寫了一篇要發到「${plat}」的「${用意}」文 👇</div></div>
+      <div class="post"><div class="head">
+        <span class="badge b-plat">${plat}</span>
+        <span class="pill">用意：${用意}</span></div>
+        <div class="body">${escHtml(body).replace(/\n/g,"<br>")}</div>
+        <div class="tags">${escHtml(tags)}</div></div>
+      <div class="row2">
+        <button class="btn btn-ghost" onclick="copyPost()">📋 複製文案</button>
+        <button class="btn btn-main" onclick="sharePost()">分享到 ${plat}</button></div>
+      ${conn[connK]?"":`<p class="note">尚未連結 ${plat}，發佈前先到「帳號」連結一下 🔗</p>`}`;
+}
 function onPhoto(e){
   const f=e.target.files[0]; if(!f)return;
   const url=URL.createObjectURL(f);
@@ -427,25 +483,21 @@ function onPhoto(e){
   const r=$("photoResult");
   r.innerHTML=`<div class="bubble" style="margin-top:16px"><div class="mascot"></div>
     <div class="say typing">白小白看圖中… ✍️</div></div>`;
-  setTimeout(()=>{
-    const base=DATA[cur].photo;
-    const plat=pickedPhotoPlat, 用意=pickedPhotoPurpose;
-    // demo：以該產業的看圖文為底，套上使用者選的用意/平台
-    const body = (用意===base.用意) ? base.body
-      : base.body+`\n\n（白小白會把這張圖改寫成「${用意}」版本，並依「${plat}」調整長度與語氣——接上模型後即時生成。）`;
-    const connK = plat==="脆"?"threads":plat==="IG"?"ig":"fb";
-    r.innerHTML=`<div class="bubble" style="margin-top:16px"><div class="mascot"></div>
-      <div class="say">看懂囉～我用你的口氣，幫你寫了一篇要發到「${plat}」的「${用意}」文 👇</div></div>
-      <div class="post"><div class="head">
-        <span class="badge b-plat">${plat}</span>
-        <span class="pill">用意：${用意}</span></div>
-        <div class="body">${body.replace(/\n/g,"<br>")}</div>
-        <div class="tags">${base.tags}</div></div>
-      <div class="row2">
-        <button class="btn btn-ghost" onclick="window._copy=\`${(body+"\\n\\n"+base.tags).replace(/[\\\`]/g,'')}\`;copyPost()">📋 複製文案</button>
-        <button class="btn btn-main" onclick="window._plat='${plat}';sharePost()">分享到 ${plat}</button></div>
-      ${conn[connK]?"":`<p class="note">尚未連結 ${plat}，發佈前先到「帳號」連結一下 🔗</p>`}`;
-  },1400);
+  const plat=pickedPhotoPlat, 用意=pickedPhotoPurpose;
+  const reader=new FileReader();
+  reader.onload=async()=>{
+    const b64=String(reader.result||'').split(',')[1];
+    const prompt=`你是台灣${(!DATA[cur].name||DATA[cur].name==='我的口氣')?'一位店家老闆':`一家「${DATA[cur].name}」的店家老闆`}本人的社群小幫手。看這張照片的內容，用老闆親切、真實的口吻，寫一則要發到「${plat}」的社群貼文，用意「${用意}」。${styleLine()}\n繁體中文，${platLen(plat)}。結尾換行後加 3 個相關 hashtag。只輸出貼文本身，不要解說。`;
+    try{
+      const txt=await aiGenerate(prompt,{mimeType:f.type||'image/jpeg',data:b64});
+      const {body,tags}=splitTags(txt);
+      r.innerHTML=photoCard(plat,用意,body,tags);
+    }catch(err){
+      r.innerHTML=`<div class="bubble" style="margin-top:16px"><div class="mascot"></div>
+        <div class="say">${busyMsg(err)}<br>（拍照生文需要接上後台才能即時看圖寫文）</div></div>`;
+    }
+  };
+  reader.readAsDataURL(f);
 }
 
 /* 動作 */
@@ -496,19 +548,28 @@ function renderPurpose(){
     box.appendChild(s);
   });
 }
-function genFromIdea(){
+async function genFromIdea(){
   const idea=($("ideaIn").value||"").trim();
   if(!idea){toast("先打一句你的想法給我 🐱");return;}
   const d=DATA[cur];
-  const post={用意:pickedPurpose, 平台:"FB",
-    body:`${idea}\n\n（白小白會用你的口氣，把這個想法寫成一篇「${pickedPurpose}」的完整貼文。這是示範骨架——接上模型後即時生成你專屬的版本。）`,
-    tags:d.sample.tags};
   $("postHead").innerHTML=`<span class="badge b-plat">FB</span><span class="pill">用意：${pickedPurpose}</span>`;
-  $("postBody").textContent=post.body;
-  $("postTags").textContent=post.tags;
-  $("postHi").textContent="這是照你的想法寫的，看看順不順 👇";
-  window._copy=post.body+"\n\n"+post.tags; window._plat="FB";
+  $("postHi").textContent="照你的想法寫中…✍️";
+  $("postBody").textContent="生成中 🐱"; $("postTags").textContent="";
+  window._plat="FB"; window._copy="";
   go('post');
+  try{
+    const txt=await aiGenerate(postPrompt(d.name,pickedPurpose,"FB",idea));
+    const {body,tags}=splitTags(txt);
+    $("postBody").textContent=body;
+    $("postTags").textContent=tags||d.sample.tags;
+    $("postHi").textContent="這是照你的想法寫的，看看順不順 👇";
+    window._copy=body+(tags?"\n\n"+tags:"");
+  }catch(e){
+    $("postBody").textContent=`${idea}`;
+    $("postTags").textContent=d.sample.tags;
+    $("postHi").textContent=busyMsg(e);
+    window._copy=idea+"\n\n"+d.sample.tags;
+  }
 }
 
 /* ---------- 平台感知分享 ---------- */
@@ -537,25 +598,31 @@ const DEFAULT_CAL=[
   ["引流","FB","整理了一份懶人包，留言我私你"],
   ["促銷","IG","本週主打，名額有限"],
 ];
-function startDistill(){
+async function startDistill(){
   const txt=($("distillIn").value||"").trim();
   if(txt.replace(/\s/g,'').length<20){ toast("多貼幾篇你自己的文，我才學得準 🐱"); return; }
   const r=$("distillResult");
-  r.innerHTML='<div class="bubble" style="margin-top:14px"><div class="mascot"></div><div class="say typing">白小白學習中…分析你的句子、用語、口氣 ✍️</div></div>';
-  setTimeout(()=>{
+  r.innerHTML='<div class="bubble" style="margin-top:14px"><div class="mascot"></div><div class="say typing">白小白學習中…逐句分析你的用語、口氣 ✍️</div></div>';
+  // 先建好「我的口氣」產業卡（語氣摘要等下填）
+  DATA.mine={ name:"我的口氣", icon:"✨", color:"#6B4C3B", desc:"用你自己的口氣",
+    hi:"我學會你的語氣了 🐱 之後都用『你的味道』幫你寫。下面是幫你排的 14 天。",
+    cal:DEFAULT_CAL,
+    sample:{用意:"",平台:"",body:"",tags:""},
+    photo:{用意:"真實案場",平台:"FB",body:"",tags:""} };
+  const goBtn='<button class="btn btn-main" onclick="cur=\'mine\';document.getElementById(\'dashHi\').innerHTML=DATA.mine.hi;renderCalendar();go(\'dash\')">用我的語氣開始 →</button>';
+  try{
+    const analysis=await aiGenerate(`下面是一位台灣店家老闆自己寫過的幾篇社群貼文。請用繁體中文，條列 4～6 點分析他的「語氣特徵」：句子長短、慣用語/口頭禪、emoji 使用習慣、人稱與對客人的稱呼、開頭與結尾風格、標點習慣。每點一句、精簡具體。只輸出條列，不要前言或結語。\n\n他的貼文：\n${txt}`);
+    learnedStyle=analysis;                       // ← 之後每次生成都注入這段，真的用他的口氣寫
+    r.innerHTML='<div class="bubble" style="margin-top:14px"><div class="mascot"></div><div class="say">學好了！我逐句抓到你的語氣特點 👇<br><br>'+escHtml(analysis).replace(/\n/g,'<br>')+'<br><br>之後不管排程、想法、看圖，我都會用<b>你的味道</b>幫你寫。</div></div>'+goBtn;
+  }catch(e){
+    // 後台沒接上 / 忙線 → 退回本地粗略分析，仍可往下走
     const emoji=(txt.match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu)||[]).length;
     const lines=txt.split(/\n+/).filter(x=>x.trim());
     const avg=Math.round(txt.replace(/\s/g,'').length/Math.max(lines.length,1));
     const longish=avg>40;
-    // 通用「我的口氣」版不綁任何產業：sample 用意/平台留空＝不對應任何一天（全部走骨架）、tags 留空，避免借用美甲等產業的 hashtag
-    DATA.mine={ name:"我的口氣", icon:"✨", color:"#6B4C3B", desc:"用你自己的口氣",
-      hi:"我學會你的語氣了 🐱 你的特點：句子"+(longish?"偏長、":"簡短、")+(emoji>2?"愛用 emoji":"少用 emoji")+"。之後都用『你的味道』幫你寫。下面是幫你排的 14 天。",
-      cal:DEFAULT_CAL,
-      sample:{用意:"",平台:"",body:"",tags:""},
-      photo:{用意:"真實案場",平台:"FB",body:"把這張照片的重點講給白小白，接上模型後我會用你的口氣寫成一篇完整貼文。",tags:""} };
-    r.innerHTML='<div class="bubble" style="margin-top:14px"><div class="mascot"></div><div class="say">學好了！我抓到你的特點：<b>句子'+(longish?'偏長':'簡短')+'、'+(emoji>2?'常用 emoji':'少用 emoji')+'</b>。<br>（測試版用示範分析；接上模型後會真的逐句學你的語氣）</div></div>'+
-      '<button class="btn btn-main" onclick="cur=\'mine\';document.getElementById(\'dashHi\').innerHTML=DATA.mine.hi;renderCalendar();go(\'dash\')">用我的語氣開始 →</button>';
-  },1600);
+    learnedStyle='句子'+(longish?'偏長':'簡短、口語')+'、'+(emoji>2?'常用 emoji':'少用 emoji');
+    r.innerHTML='<div class="bubble" style="margin-top:14px"><div class="mascot"></div><div class="say">先抓到你的特點：<b>句子'+(longish?'偏長':'簡短')+'、'+(emoji>2?'常用 emoji':'少用 emoji')+'</b>。<br>（'+busyMsg(e)+'：接上後台後會逐句精準學）</div></div>'+goBtn;
+  }
 }
 
 /* 路由 */
